@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kontrol Pintu Otomatis</title>
+
+    <!-- Bootstrap 5 -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background: #eef2f3;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .card {
+        border-radius: 16px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- LOGIN -->
+    <div class="card p-4 text-center" id="login-form" style="width: 340px">
+      <h3 class="mb-3 fw-bold">Login</h3>
+      <input
+        type="text"
+        id="username"
+        class="form-control mb-3"
+        placeholder="Username"
+      />
+      <input
+        type="password"
+        id="password"
+        class="form-control mb-3"
+        placeholder="Password"
+      />
+      <button class="btn btn-success w-100" onclick="login()">Masuk</button>
+    </div>
+
+    <!-- USER IGO -->
+    <div class="card p-4 text-center d-none" id="user-igo" style="width: 340px">
+      <h3 class="fw-bold mb-2">Selamat Datang Igo 👋</h3>
+      <p class="text-muted">Anda login sebagai <b>Igo</b></p>
+
+      <button
+        class="btn btn-success w-100 mb-2"
+        onclick="updateStatus('igo', 1)"
+      >
+        🔓 Buka
+      </button>
+      <button
+        class="btn btn-primary w-100 mb-2"
+        onclick="updateStatus('igo', 0)"
+      >
+        🔒 Tutup
+      </button>
+      <p id="igoStatus" class="fw-bold text-secondary">
+        Status: Pintu Tertutup ❌
+      </p>
+      <button class="btn btn-danger w-100 mt-2" onclick="logout()">
+        Keluar
+      </button>
+    </div>
+
+    <!-- USER ISMAIL -->
+    <div
+      class="card p-4 text-center d-none"
+      id="user-ismail"
+      style="width: 340px"
+    >
+      <h3 class="fw-bold mb-2">Selamat Datang Ismail 👋</h3>
+      <p class="text-muted">Anda login sebagai <b>Ismail</b></p>
+
+      <button
+        class="btn btn-success w-100 mb-2"
+        onclick="updateStatus('ismail', 1)"
+      >
+        🔓 Buka
+      </button>
+      <button
+        class="btn btn-primary w-100 mb-2"
+        onclick="updateStatus('ismail', 0)"
+      >
+        🔒 Tutup
+      </button>
+      <p id="ismailStatus" class="fw-bold text-secondary">
+        Status: Pintu Tertutup ❌
+      </p>
+      <button class="btn btn-danger w-100 mt-2" onclick="logout()">
+        Keluar
+      </button>
+    </div>
+
+    <script>
+      // === KONFIGURASI THINGSPEAK ===
+      const apiKeyWrite = "AGPIYM3P4IAIBVFU";
+      const channelID = "3147685";
+      const apiReadURL = `https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1`;
+
+      // === DATA USER ===
+      const users = [
+        { username: "igo", password: "igo123", role: "igo" },
+        { username: "ismail", password: "ismail123", role: "ismail" },
+      ];
+
+      // === AUTO LOGIN ===
+      window.onload = () => {
+        const savedUser = localStorage.getItem("loggedUser");
+        if (savedUser) {
+          showUser(savedUser);
+          loadStatus(savedUser);
+        }
+      };
+
+      function login() {
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value.trim();
+
+        const foundUser = users.find(
+          (u) => u.username === username && u.password === password
+        );
+
+        if (foundUser) {
+          localStorage.setItem("loggedUser", foundUser.role);
+          showUser(foundUser.role);
+          loadStatus(foundUser.role);
+        } else {
+          alert("Username atau password salah!");
+        }
+      }
+
+      function showUser(role) {
+        document.getElementById("login-form").classList.add("d-none");
+        document
+          .getElementById("user-igo")
+          .classList.toggle("d-none", role !== "igo");
+        document
+          .getElementById("user-ismail")
+          .classList.toggle("d-none", role !== "ismail");
+      }
+
+      function logout() {
+        localStorage.removeItem("loggedUser");
+        document.getElementById("login-form").classList.remove("d-none");
+        document.getElementById("user-igo").classList.add("d-none");
+        document.getElementById("user-ismail").classList.add("d-none");
+      }
+
+      // === UPDATE STATUS KE THINGSPEAK ===
+      async function updateStatus(user, status) {
+        let field = "";
+        let statusEl = null;
+
+        if (user === "igo") {
+          field = "field1";
+          statusEl = document.getElementById("igoStatus");
+        } else if (user === "ismail") {
+          field = "field2";
+          statusEl = document.getElementById("ismailStatus");
+        }
+
+        // Langsung ubah tampilan agar terasa cepat
+        statusEl.innerText =
+          status === 1
+            ? "Status: Pintu Terbuka ✅"
+            : "Status: Pintu Tertutup ❌";
+
+        const url = `https://api.thingspeak.com/update?api_key=${apiKeyWrite}&${field}=${status}`;
+        try {
+          await fetch(url);
+          console.log(`✅ ${user.toUpperCase()} ubah status ke: ${status}`);
+        } catch (err) {
+          console.error("❌ Gagal kirim ke ThingSpeak", err);
+        }
+      }
+
+      // === MUAT STATUS DARI THINGSPEAK ===
+      async function loadStatus(user) {
+        try {
+          const res = await fetch(apiReadURL);
+          const data = await res.json();
+          const feeds = data.feeds[0];
+
+          if (feeds) {
+            const field1 = feeds.field1;
+            const field2 = feeds.field2;
+
+            if (user === "igo") {
+              const statusEl = document.getElementById("igoStatus");
+              statusEl.innerText =
+                field1 == "1"
+                  ? "Status: Pintu Terbuka ✅"
+                  : "Status: Pintu Tertutup ❌";
+            } else if (user === "ismail") {
+              const statusEl = document.getElementById("ismailStatus");
+              statusEl.innerText =
+                field2 == "1"
+                  ? "Status: Pintu Terbuka ✅"
+                  : "Status: Pintu Tertutup ❌";
+            }
+          }
+        } catch (err) {
+          console.error("Gagal load status ThingSpeak", err);
+        }
+      }
+    </script>
+  </body>
+</html>
