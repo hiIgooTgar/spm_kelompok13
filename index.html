@@ -1,11 +1,10 @@
+<!-- Simpan sebagai index.html -->
 <!DOCTYPE html>
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kontrol Pintu Otomatis</title>
-
-    <!-- Bootstrap 5 -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -25,7 +24,6 @@
     </style>
   </head>
   <body>
-    <!-- LOGIN -->
     <div class="card p-4 text-center" id="login-form" style="width: 340px">
       <h3 class="mb-3 fw-bold">Login</h3>
       <input
@@ -43,11 +41,9 @@
       <button class="btn btn-success w-100" onclick="login()">Masuk</button>
     </div>
 
-    <!-- USER IGO -->
     <div class="card p-4 text-center d-none" id="user-igo" style="width: 340px">
       <h3 class="fw-bold mb-2">Selamat Datang Igo 👋</h3>
       <p class="text-muted">Anda login sebagai <b>Igo</b></p>
-
       <button
         class="btn btn-success w-100 mb-2"
         onclick="updateStatus('igo', 1)"
@@ -68,7 +64,6 @@
       </button>
     </div>
 
-    <!-- USER ISMAIL -->
     <div
       class="card p-4 text-center d-none"
       id="user-ismail"
@@ -76,7 +71,6 @@
     >
       <h3 class="fw-bold mb-2">Selamat Datang Ismail 👋</h3>
       <p class="text-muted">Anda login sebagai <b>Ismail</b></p>
-
       <button
         class="btn btn-success w-100 mb-2"
         onclick="updateStatus('ismail', 1)"
@@ -99,17 +93,15 @@
 
     <script>
       // === KONFIGURASI THINGSPEAK ===
-      const apiKeyWrite = "AGPIYM3P4IAIBVFU";
+      const apiKeyWrite = "AGPIYM3P4IAIBVFU"; // HATI-HATI: jangan publish key ini
       const channelID = "3147685";
       const apiReadURL = `https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1`;
 
-      // === DATA USER ===
       const users = [
         { username: "igo", password: "igo123", role: "igo" },
         { username: "ismail", password: "ismail123", role: "ismail" },
       ];
 
-      // === AUTO LOGIN ===
       window.onload = () => {
         const savedUser = localStorage.getItem("loggedUser");
         if (savedUser) {
@@ -121,11 +113,9 @@
       function login() {
         const username = document.getElementById("username").value.trim();
         const password = document.getElementById("password").value.trim();
-
         const foundUser = users.find(
           (u) => u.username === username && u.password === password
         );
-
         if (foundUser) {
           localStorage.setItem("loggedUser", foundUser.role);
           showUser(foundUser.role);
@@ -152,11 +142,9 @@
         document.getElementById("user-ismail").classList.add("d-none");
       }
 
-      // === UPDATE STATUS KE THINGSPEAK ===
       async function updateStatus(user, status) {
         let field = "";
         let statusEl = null;
-
         if (user === "igo") {
           field = "field1";
           statusEl = document.getElementById("igoStatus");
@@ -165,7 +153,6 @@
           statusEl = document.getElementById("ismailStatus");
         }
 
-        // Langsung ubah tampilan agar terasa cepat
         statusEl.innerText =
           status === 1
             ? "Status: Pintu Terbuka ✅"
@@ -173,37 +160,35 @@
 
         const url = `https://api.thingspeak.com/update?api_key=${apiKeyWrite}&${field}=${status}`;
         try {
-          await fetch(url);
-          console.log(`✅ ${user.toUpperCase()} ubah status ke: ${status}`);
+          const res = await fetch(url);
+          if (!res.ok) console.error("ThingSpeak update gagal:", res.status);
+          else
+            console.log(`✅ ${user.toUpperCase()} ubah status ke: ${status}`);
         } catch (err) {
           console.error("❌ Gagal kirim ke ThingSpeak", err);
         }
       }
 
-      // === MUAT STATUS DARI THINGSPEAK ===
       async function loadStatus(user) {
         try {
           const res = await fetch(apiReadURL);
+          if (!res.ok)
+            return console.error("Gagal load status ThingSpeak:", res.status);
           const data = await res.json();
-          const feeds = data.feeds[0];
-
-          if (feeds) {
-            const field1 = feeds.field1;
-            const field2 = feeds.field2;
-
-            if (user === "igo") {
-              const statusEl = document.getElementById("igoStatus");
-              statusEl.innerText =
-                field1 == "1"
-                  ? "Status: Pintu Terbuka ✅"
-                  : "Status: Pintu Tertutup ❌";
-            } else if (user === "ismail") {
-              const statusEl = document.getElementById("ismailStatus");
-              statusEl.innerText =
-                field2 == "1"
-                  ? "Status: Pintu Terbuka ✅"
-                  : "Status: Pintu Tertutup ❌";
-            }
+          const feeds = data.feeds && data.feeds[0];
+          if (!feeds) return;
+          const field1 = feeds.field1;
+          const field2 = feeds.field2;
+          if (user === "igo") {
+            document.getElementById("igoStatus").innerText =
+              field1 == "1"
+                ? "Status: Pintu Terbuka ✅"
+                : "Status: Pintu Tertutup ❌";
+          } else if (user === "ismail") {
+            document.getElementById("ismailStatus").innerText =
+              field2 == "1"
+                ? "Status: Pintu Terbuka ✅"
+                : "Status: Pintu Tertutup ❌";
           }
         } catch (err) {
           console.error("Gagal load status ThingSpeak", err);
