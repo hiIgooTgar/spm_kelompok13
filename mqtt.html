@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hotel Cakrawala Ungu</title>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        height: 100vh;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(135deg, #e8eef3, #f7f9fc);
+        padding: 20px;
+      }
+
+      h2 {
+        font-size: 28px;
+        color: #333;
+        text-align: center;
+        font-weight: 600;
+        margin-bottom: 5px;
+      }
+
+      /* ===== MODE INFO TEXT ===== */
+      .mode-info {
+        font-size: 15px;
+        color: #555;
+        text-align: center;
+        margin-bottom: 20px;
+        opacity: 0.8;
+      }
+
+      .content-main-mqtt {
+        width: 65%;
+        max-width: 600px;
+      }
+
+      .status-box {
+        font-size: 1.4rem;
+        font-weight: bold;
+        margin: 20px 0 30px;
+        padding: 25px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+        line-height: 1.8;
+        text-align: center;
+      }
+
+      #alertBox {
+        margin-bottom: 15px;
+      }
+
+      .alert {
+        padding: 15px;
+        border-radius: 10px;
+        font-size: 17px;
+        font-weight: bold;
+        color: white;
+        animation: fadeIn 600ms ease-in;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+
+      .success {
+        background: #4caf50;
+      }
+
+      .info {
+        background: #1976d2;
+      }
+
+      .error {
+        background: #e53935;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+      }
+
+      button {
+        padding: 14px 26px;
+        font-size: 1.05rem;
+        border-radius: 8px;
+        border: none;
+        color: white;
+        cursor: pointer;
+        transition: 0.2s ease;
+      }
+
+      button:hover {
+        filter: brightness(0.92);
+      }
+
+      .on {
+        background: #4caf50;
+      }
+
+      .off {
+        background: #e53935;
+      }
+
+      .auto {
+        background: #1976d2;
+      }
+
+      @media screen and (max-width: 900px) {
+        .content-main-mqtt {
+          width: 80%;
+        }
+      }
+
+      @media screen and (max-width: 576px) {
+        .content-main-mqtt {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="content-main-mqtt">
+      <h2>Lampu Otomatis Ultrasonik - MQTT</h2>
+
+      <!-- Keterangan MODE -->
+      <p class="mode-info">
+        Keterangan Mode: <b>Manual</b> = tombol | <b>Otomatis</b> = sensor
+        ultrasonik
+      </p>
+
+      <div id="alertBox"></div>
+
+      <div class="status-box">
+        Lampu: <span id="lampu">Loading...</span><br />
+        Jarak: <span id="jarak">0</span> cm<br />
+        Mode: <span id="mode">Manual</span>
+      </div>
+
+      <div class="grid">
+        <button onclick="sendCmd('/on', 'manual')" class="on">Lampu ON</button>
+        <button onclick="sendCmd('/off', 'manual')" class="off">
+          Lampu OFF
+        </button>
+        <button onclick="sendCmd('/auto', 'auto')" class="auto">
+          Mode Otomatis
+        </button>
+      </div>
+    </div>
+
+    <script>
+      function showAlert(text, type) {
+        document.getElementById("alertBox").innerHTML = `
+          <div class="alert ${type}">${text}</div>
+        `;
+        setTimeout(
+          () => (document.getElementById("alertBox").innerHTML = ""),
+          2500
+        );
+      }
+
+      function sendCmd(cmd, mode) {
+        fetch(cmd).then(() => {
+          if (mode === "manual") {
+            showAlert("Mode Manual: Lampu dikendalikan tombol.", "success");
+            document.getElementById("mode").innerText = "Manual";
+          }
+          if (mode === "auto") {
+            showAlert("Mode Otomatis: Lampu mengikuti sensor.", "info");
+            document.getElementById("mode").innerText = "Otomatis";
+          }
+        });
+      }
+
+      setInterval(() => {
+        fetch("/status")
+          .then((r) => r.json())
+          .then((d) => {
+            document.getElementById("lampu").innerText = d.lampu;
+            document.getElementById("jarak").innerText = d.jarak;
+          });
+      }, 500);
+    </script>
+  </body>
+</html>
