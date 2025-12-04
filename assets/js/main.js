@@ -18,9 +18,16 @@ window.onload = () => {
 function login() {
   const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
+
+  if (username === "" || password === "") {
+    alert("Username dan password wajib diisi!");
+    return;
+  }
+
   const foundUser = users.find(
     (u) => u.username === username && u.password === password
   );
+
   if (foundUser) {
     localStorage.setItem("loggedUser", foundUser.role);
     showUser(foundUser.role);
@@ -52,9 +59,55 @@ function logout() {
   document.getElementById("password").value = "";
 }
 
+async function cekStatusThingSpeak() {
+  try {
+    const res = await fetch(apiReadURL);
+    if (!res.ok) {
+      console.error("Gagal membaca data ThingSpeak:", res.status);
+      return null;
+    }
+
+    const data = await res.json();
+    const feeds = data.feeds && data.feeds[0];
+    if (!feeds) {
+      console.error("Data ThingSpeak kosong!");
+      return null;
+    }
+
+    const statusIgo = feeds.field1 ? Number(feeds.field1) : 0;
+    const statusIsmail = feeds.field2 ? Number(feeds.field2) : 0;
+
+    return {
+      igo: statusIgo,
+      ismail: statusIsmail,
+    };
+  } catch (err) {
+    console.error("Error saat mengambil status ThingSpeak:", err);
+    return null;
+  }
+}
+
+async function loadStatus(user) {
+  const result = await cekStatusThingSpeak();
+  if (!result) return;
+
+  if (user === "igo") {
+    document.getElementById("igoStatus").innerText =
+      result.igo === 1
+        ? "Status: Pintu Terbuka ✅"
+        : "Status: Pintu Tertutup ❌";
+  } else if (user === "ismail") {
+    document.getElementById("ismailStatus").innerText =
+      result.ismail === 1
+        ? "Status: Pintu Terbuka ✅"
+        : "Status: Pintu Tertutup ❌";
+  }
+}
+
 async function updateStatus(user, status) {
   let field = "";
   let statusEl = null;
+
   if (user === "igo") {
     field = "field1";
     statusEl = document.getElementById("igoStatus");
@@ -67,6 +120,7 @@ async function updateStatus(user, status) {
     status === 1 ? "Status: Pintu Terbuka ✅" : "Status: Pintu Tertutup ❌";
 
   const url = `https://api.thingspeak.com/update?api_key=${apiKeyWrite}&${field}=${status}`;
+
   try {
     const res = await fetch(url);
     if (!res.ok) console.error("ThingSpeak update gagal:", res.status);
@@ -76,33 +130,6 @@ async function updateStatus(user, status) {
   }
 }
 
-async function loadStatus(user) {
-  try {
-    const res = await fetch(apiReadURL);
-    if (!res.ok)
-      return console.error("Gagal load status ThingSpeak:", res.status);
-    const data = await res.json();
-    const feeds = data.feeds && data.feeds[0];
-    if (!feeds) return;
-    const field1 = feeds.field1;
-    const field2 = feeds.field2;
-    if (user === "igo") {
-      document.getElementById("igoStatus").innerText =
-        field1 == "1"
-          ? "Status: Pintu Terbuka ✅"
-          : "Status: Pintu Tertutup ❌";
-    } else if (user === "ismail") {
-      document.getElementById("ismailStatus").innerText =
-        field2 == "1"
-          ? "Status: Pintu Terbuka ✅"
-          : "Status: Pintu Tertutup ❌";
-    }
-  } catch (err) {
-    console.error("Gagal load status ThingSpeak", err);
-  }
-}
-
-// swiper
 var swiper = new Swiper(".imgLogin", {
   spaceBetween: 20,
   loop: true,
