@@ -1,6 +1,7 @@
 const apiKeyWrite = "AGPIYM3P4IAIBVFU";
+const apiKeyRead = "YZDN223GZK9V64SH";
 const channelID = "3147685";
-const apiReadURL = `https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1`;
+const apiReadURL = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${apiKeyRead}&results=1`;
 
 const users = [
   { username: "igo", password: "igo123", role: "igo" },
@@ -34,12 +35,15 @@ function login() {
     loadStatus(foundUser.role);
   } else {
     alert("Username atau password salah!");
+    document.getElementById("username").value = "";
+    document.getElementById("password").value = "";
   }
 }
 
 function showUser(role) {
   document.getElementById("login-form").classList.add("d-none");
   document.getElementById("content-second").classList.remove("d-none");
+
   document.getElementById("user-igo").classList.add("d-none");
   document.getElementById("user-ismail").classList.add("d-none");
 
@@ -77,12 +81,14 @@ async function cekStatusThingSpeak() {
     const statusIgo = feeds.field1 ? Number(feeds.field1) : 0;
     const statusIsmail = feeds.field2 ? Number(feeds.field2) : 0;
 
+    console.log("Field terbaru:", statusIgo, statusIsmail);
+
     return {
       igo: statusIgo,
       ismail: statusIsmail,
     };
   } catch (err) {
-    console.error("Error saat mengambil status ThingSpeak:", err);
+    console.error("❌ Error saat mengambil status ThingSpeak:", err);
     return null;
   }
 }
@@ -123,8 +129,13 @@ async function updateStatus(user, status) {
 
   try {
     const res = await fetch(url);
-    if (!res.ok) console.error("ThingSpeak update gagal:", res.status);
-    else console.log(`✅ ${user.toUpperCase()} ubah status ke: ${status}`);
+    if (!res.ok) {
+      console.error("ThingSpeak update gagal:", res.status);
+    } else {
+      console.log(`✅ Status ${user.toUpperCase()} diubah ke: ${status}`);
+    }
+
+    setTimeout(() => loadStatus(user), 1200);
   } catch (err) {
     console.error("❌ Gagal kirim ke ThingSpeak", err);
   }
